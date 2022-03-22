@@ -1,0 +1,8 @@
+prefix=/home/team6/robotic_autonomy_ws/install
+
+Name: ball_detect
+Description: Description of ball_detect
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

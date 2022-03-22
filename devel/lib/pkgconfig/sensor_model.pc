@@ -1,0 +1,8 @@
+prefix=/home/team6/robotic_autonomy_ws/devel
+
+Name: sensor_model
+Description: Description of sensor_model
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 
