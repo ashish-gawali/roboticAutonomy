@@ -117,9 +117,12 @@ class Tracker3D():
         varianceY = self.variance_XYZ[1]
         varianceZ = self.variance_XYZ[2]
         
-        var_xx = varianceX*varianceX
-        var_xy = varianceX*varianceY
-        var_xz = varianceX*varianceZ
+        var_xx = varianceX
+        var_xy = 0
+        var_xz = 0
+        # var_xx = varianceX*varianceX
+        # var_xy = varianceX*varianceY
+        # var_xz = varianceX*varianceZ
 
         if np.isnan(var_xx):# var_xx<0.000001:
             var_xx = 0
@@ -129,17 +132,25 @@ class Tracker3D():
             var_xz = 0
 
         var_yx = var_xy
-        var_yy = varianceY*varianceY
-        var_yz = varianceY*varianceZ
+        var_yy = varianceY
+        var_yz = 0
+
+        # var_yx = var_xy
+        # var_yy = varianceY*varianceY
+        # var_yz = varianceY*varianceZ
 
         if np.isnan(var_yy):# var_xx<0.000001:
             var_yy = 0
         if np.isnan(var_yz):# var_xx<0.000001:
             var_yz = 0
         
-        var_zx = var_xz
-        var_zy = var_yz
-        var_zz = varianceZ*varianceZ
+        var_zx = 0
+        var_zy = 0
+        var_zz = varianceZ
+        
+        # var_zx = var_xz
+        # var_zy = var_yz
+        # var_zz = varianceZ*varianceZ
 
         # if np.isnan(var_xx):# var_xx<0.000001:
         #     var_xx = 0
