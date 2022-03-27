@@ -88,7 +88,6 @@ class Tracker3D():
 
         pass
 
-
     def get_xyz(self):
         # Function to compute the x,y,z coordinates of the ball
         xRVIZ = self.ballloc_xyz[2]
@@ -169,7 +168,6 @@ class Tracker3D():
         return self.covarianceMatrix, self.ballloc_xyz
         #return (self.variance_XYZ)
 
-
     def pub_viz(self): #ball with respect to camera. Other python file ball with respect to world.
         # Publish the marker for the ball
         if self.detected ==1:
@@ -242,7 +240,6 @@ class Tracker3D():
         
         pass
    
-
     def image_cb(self,data):
         try:
 		    self.cv_image = bridge.imgmsg_to_cv2(data,"bgr8") #receives image
@@ -320,9 +317,6 @@ class Tracker3D():
         cv2.imshow('ImageWindow', self.cv_image)
 
 	    # only proceed if at least one contour was found
-    
-        
-
     def depth_cb(self,data):
         self.depth_image = data
         twoDX = self.ballloc_pixel[0] 
@@ -338,7 +332,14 @@ class Tracker3D():
             z =p[2]
             self.ballloc_xyz =[x,y,z]
 
+    def diffrential(self, data, theta):
+        l = 0.2
+        R_w = 0.1
+        ratio = 8
 
+        dxk = R_w/ (2 * ratio) *(self.wri + self.wli)*np.cos(theta)
+        dyk = R_w/ (2 * ratio) *(self.wri + self.wli)*np.sin(theta)
+        dthk = R_w/ (l * ratio) *  (self.wri - self.wli)
     
 
 if __name__ == "__main__":
