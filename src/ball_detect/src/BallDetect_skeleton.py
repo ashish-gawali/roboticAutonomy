@@ -98,75 +98,39 @@ class Tracker3D():
         return self.ballloc_xyz
 
     def get_x_variance(self):
-        return 6.07E-06*self.variance_XYZ[0] + 1.76E-04
+        temp = 6.07E-06*self.ballloc_xyz[0] + 1.76E-04
+        return abs(temp)
     
     def get_y_variance(self):
-        return 2.97E-04*self.variance_XYZ[1] + -2.49E-03
-    
+        temp = 2.97E-04*self.ballloc_xyz[1] + -2.49E-03
+        return abs(temp)
     def get_XYZ_variance(self):
         #We kno that the error inmeasurement is 2% at 2 metres, we are in centimeter
-        xRVIZ = self.ballloc_xyz[2]
-        yRVIZ = self.ballloc_xyz[0]*-1
-        zRVIZ = self.ballloc_xyz[1] *-1#robots z coordinate due to global X
-        self.ballloc_xyz = [xRVIZ,yRVIZ,zRVIZ]
-        self.variance_XYZ[2] = ((0.13*self.ballloc_xyz[2])-21)*10
+        xPlace = self.ballloc_xyz[0]
+        yPlace = self.ballloc_xyz[1]
+        zPlace = self.ballloc_xyz[2] #robots z coordinate due to global X
+        #self.variance_XYZ[2] = ((13*zRVIZ)-21)
+        self.variance_XYZ[2] = ((0.013*zPlace)-0.0021)
         self.variance_XYZ[0] = self.get_x_variance() #((0.00029*self.ballloc_xyz[0]) - .00254)*10
         self.variance_XYZ[1] = self.get_y_variance() #((0.0324*self.ballloc_xyz[1]) -0.163) #0.0324*x + -0.163
         
         varianceX = self.variance_XYZ[0]
         varianceY = self.variance_XYZ[1]
         varianceZ = self.variance_XYZ[2]
+
+        varianceXRVIZ = self.variance_XYZ[2]
+        varianceYRVIZ = self.variance_XYZ[0]
+        varianceZRVIZ = self.variance_XYZ[1]
         
-        var_xx = varianceX
-        var_xy = 0
-        var_xz = 0
-        # var_xx = varianceX*varianceX
-        # var_xy = varianceX*varianceY
-        # var_xz = varianceX*varianceZ
-
-        if np.isnan(var_xx):# var_xx<0.000001:
-            var_xx = 0
-        if np.isnan(var_xy):# var_xx<0.000001:
-            var_xy = 0
-        if np.isnan(var_xz):# var_xx<0.000001:
-            var_xz = 0
-
-        var_yx = var_xy
-        var_yy = varianceY
-        var_yz = 0
-
-        # var_yx = var_xy
-        # var_yy = varianceY*varianceY
-        # var_yz = varianceY*varianceZ
-
-        if np.isnan(var_yy):# var_xx<0.000001:
-            var_yy = 0
-        if np.isnan(var_yz):# var_xx<0.000001:
-            var_yz = 0
-        
-        var_zx = 0
-        var_zy = 0
-        var_zz = varianceZ
-        
-        # var_zx = var_xz
-        # var_zy = var_yz
-        # var_zz = varianceZ*varianceZ
-
-        # if np.isnan(var_xx):# var_xx<0.000001:
-        #     var_xx = 0
-
-        if np.isnan(var_yy):#<0.000001:
-            var_yy = 0
-        #X,Y,Z
-        self.covarianceMatrix = [var_xx,var_xy,var_xz,0,0,0,
-                            var_yx,var_yy,var_yz,0,0,0,
-                            var_zx,var_zy,var_zz,0,0,0,
+        self.covarianceMatrix = [varianceXRVIZ,0 ,0 ,0,0,0,
+                            0,varianceYRVIZ,0,0,0,0,
+                            0,0,varianceZRVIZ,0,0,0,
                             0,0,0,0,0,0,
                             0,0,0,0,0,0,
                             0,0,0,0,0,0]
-        print(self.covarianceMatrix)
+        #print(self.covarianceMatrix)
 
-        return self.covarianceMatrix, self.ballloc_xyz
+        return self.covarianceMatrix
         #return (self.variance_XYZ)
 
 
@@ -201,18 +165,21 @@ class Tracker3D():
 
     def posewithCovar(self):
         # Function to get depth of the ball
+        xRVIZ = self.ballloc_xyz[2]
+        yRVIZ = self.ballloc_xyz[0]*-1
+        zRVIZ = self.ballloc_xyz[1] *-1
         pwc = PoseWithCovarianceStamped()
         pwc.header.frame_id = "camera_link"
         pwc.header.stamp = rospy.Time.now()
-        pwc.pose.pose.position.x = self.ballloc_xyz[0]
-        pwc.pose.pose.position.y = self.ballloc_xyz[1]
-        pwc.pose.pose.position.z = self.ballloc_xyz[2]
+        pwc.pose.pose.position.x = xRVIZ
+        pwc.pose.pose.position.y = yRVIZ
+        pwc.pose.pose.position.z = zRVIZ
         pwc.pose.pose.orientation.x = 0
         pwc.pose.pose.orientation.y = 0
         pwc.pose.pose.orientation.z = 0
         pwc.pose.pose.orientation.w = 1
         pwc.pose.covariance = self.covarianceMatrix
-        #self.covarianceMatrix
+        print(self.covarianceMatrix)
 
         # pwc.pose.covariance = self.covarianceMatrix
 
@@ -222,9 +189,9 @@ class Tracker3D():
         marker.id = 2
         marker.type = marker.SPHERE
         marker.action =marker.ADD
-        marker.pose.position.x = self.ballloc_xyz[0]
-        marker.pose.position.y = self.ballloc_xyz[1]
-        marker.pose.position.z = self.ballloc_xyz[2]
+        marker.pose.position.x = xRVIZ
+        marker.pose.position.y = yRVIZ
+        marker.pose.position.z = zRVIZ
         marker.pose.orientation.x = 0
         marker.pose.orientation.y = 0
         marker.pose.orientation.z = 0
