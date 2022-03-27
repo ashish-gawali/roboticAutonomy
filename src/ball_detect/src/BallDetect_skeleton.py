@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from typing_extensions import Self
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import axes3d, Axes3D
@@ -102,6 +103,8 @@ class Tracker3D():
     def get_y_variance(self):
         return 2.97E-04*self.variance_XYZ[1] + -2.49E-03
     
+    def get_z_variance(self):
+        return ((0.13*self.ballloc_xyz[2])-21)*10
     def get_XYZ_variance(self):
         #We kno that the error inmeasurement is 2% at 2 metres, we are in centimeter
         xRVIZ = self.ballloc_xyz[2]
@@ -340,7 +343,66 @@ class Tracker3D():
         dxk = R_w/ (2 * ratio) *(self.wri + self.wli)*np.cos(theta)
         dyk = R_w/ (2 * ratio) *(self.wri + self.wli)*np.sin(theta)
         dthk = R_w/ (l * ratio) *  (self.wri - self.wli)
+
+        return [dxk, dyk, dthk] 
     
+    def test_diffrential(self, data):
+        nk = 10
+        dt = 1
+        theta = 0
+        x = 1
+        y = 1
+        for k in range(nk):
+            dxk, dyk, dthk = self.diffrential(data,theta)
+            x = x + dxk*dt
+            y = y + dyk*dt
+            theta = theta + dthk*dt
+        #matplotlib somehow
+
+    #gives output as change in(differential) sensed values [x, y, z, theta]
+    """input: omega->rotational speed of the tyres
+              phi-> angle of the tyre
+    """
+    def motionModel(self,omega,phi):
+        x_sensed = self.ballloc_xyz[0] 
+        y_sensed = self.ballloc_xyz[1]
+        z_sensed = self.ballloc_xyz[2]
+
+        theta = np.arctan2(z_sensed, x_sensed)
+
+        #Ackerman steering
+        l = 0.5
+        R_w = 0.1
+        ratio = 8
+        omega = 10 #need to figure out this omega can be populated
+        v = R_w/ratio*omega
+
+        dz = v*np.cos(theta)
+        dx = v*np.sin(theta)
+        dtheta = v/l * np.tan(phi)
+        dy = np.random.normal(0, 0.2) #setting it 0.2 as a educated guess of random walk
+
+        return [dx, dy, dz, dtheta]
+
+
+    #gives output as observed values including noise [x,y,z]
+    def sensorModel(self):
+        #getting variance based on where we sensed the ball
+        xVariance = self.get_x_variance()
+        yVariance = self.get_y_variance()
+        zVariance = self.get_z_variance()
+
+        #sensed using camera
+        x_sensed = self.ballloc_xyz[0] 
+        y_sensed = self.ballloc_xyz[1]
+        z_sensed = self.ballloc_xyz[2]
+        
+        #observing it including noise
+        x_observed = x_sensed + np.random.normal(0, np.sqrt(xVariance))
+        y_observed = y_sensed + np.random.normal(0, np.sqrt(yVariance))
+        z_observed = z_sensed + np.random.normal(0, np.sqrt(zVariance))
+
+        return [x_observed, y_observed, z_observed]
 
 if __name__ == "__main__":
     rospy.init_node("measure_3d")
