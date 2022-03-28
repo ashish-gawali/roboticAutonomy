@@ -104,6 +104,11 @@ class Tracker3D():
     def get_y_variance(self):
         temp = 2.97E-04*self.ballloc_xyz[1] + -2.49E-03
         return abs(temp)
+
+    def get_z_variance(self):
+        temp = ((0.013*self.ballloc_xyz[2])-0.0021)
+        return abs(temp)
+
     def get_XYZ_variance(self):
         #We kno that the error inmeasurement is 2% at 2 metres, we are in centimeter
         xPlace = self.ballloc_xyz[0]
@@ -179,7 +184,7 @@ class Tracker3D():
         pwc.pose.pose.orientation.z = 0
         pwc.pose.pose.orientation.w = 1
         pwc.pose.covariance = self.covarianceMatrix
-        print(self.covarianceMatrix)
+        #print(self.covarianceMatrix)
 
         # pwc.pose.covariance = self.covarianceMatrix
 
@@ -305,7 +310,46 @@ class Tracker3D():
             z =p[2]
             self.ballloc_xyz =[x,y,z]
 
+    def motionModel(self,omega,phi):
+        x_sensed = self.ballloc_xyz[0] 
+        y_sensed = self.ballloc_xyz[1]
+        z_sensed = self.ballloc_xyz[2]
 
+        theta = np.arctan2(z_sensed, x_sensed)
+
+        #Ackerman steering
+        l = 0.5
+        R_w = 0.1
+        ratio = 8
+        omega = 10 #need to figure out this omega can be populated
+        v = R_w/ratio*omega
+
+        dz = v*np.cos(theta)
+        dx = v*np.sin(theta)
+        dtheta = v/l * np.tan(phi)
+        dy = np.random.normal(0, 0.2) #setting it 0.2 as a educated guess of random walk
+
+        return [dx, dy, dz, dtheta]
+
+
+    #gives output as observed values including noise [x,y,z]
+    def sensorModel(self):
+        #getting variance based on where we sensed the ball
+        xVariance = self.get_x_variance()
+        yVariance = self.get_y_variance()
+        zVariance = self.get_z_variance()
+
+        #sensed using camera
+        x_sensed = self.ballloc_xyz[0] 
+        y_sensed = self.ballloc_xyz[1]
+        z_sensed = self.ballloc_xyz[2]
+        
+        #observing it including noise
+        x_observed = x_sensed + np.random.normal(0, np.sqrt(xVariance))
+        y_observed = y_sensed + np.random.normal(0, np.sqrt(yVariance))
+        z_observed = z_sensed + np.random.normal(0, np.sqrt(zVariance))
+
+        return [x_observed, y_observed, z_observed]
     
 
 if __name__ == "__main__":
@@ -322,4 +366,5 @@ if __name__ == "__main__":
         if tracker.ball_detected ==1:
             tracker.posewithCovar()
         #call pub_tf
+        print(tracker.sensorModel())
         rate.sleep()
