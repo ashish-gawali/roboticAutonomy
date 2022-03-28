@@ -25,7 +25,9 @@ class MotionModel():
         return abs(temp)
 
     #motion model
-    def motionModel(self,omega,phi):
+    # for omega need to figure out this omega can be populated
+
+    def motionModel(self,omega = 10,phi=0):
         x_sensed = self.ballloc_xyz[0] 
         y_sensed = self.ballloc_xyz[1]
         z_sensed = self.ballloc_xyz[2]
@@ -75,5 +77,6 @@ if __name__ == "__main__":
     viz_img = True
     rate = rospy.Rate(1)
     while not rospy.is_shutdown():
-        print(motionModel.sensorModel())
+        print("sendor model",motionModel.sensorModel())
+        print("motion model",motionModel.motionModel())
         rate.sleep()
