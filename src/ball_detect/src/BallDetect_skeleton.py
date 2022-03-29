@@ -366,5 +366,4 @@ if __name__ == "__main__":
         if tracker.ball_detected ==1:
             tracker.posewithCovar()
         #call pub_tf
-        print(tracker.sensorModel())
         rate.sleep()
