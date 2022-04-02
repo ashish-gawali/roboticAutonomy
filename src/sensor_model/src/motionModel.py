@@ -2,6 +2,7 @@
 import rospy
 import geometry_msgs.msg
 from geometry_msgs.msg import PoseWithCovarianceStamped
+import std_msgs.msg
 
 import numpy as np
 
@@ -10,6 +11,7 @@ class MotionModel():
     def __init__(self):
         # pose_topic_name = '/pwcov'
         self.poseWithCovraince = rospy.Subscriber('/pwcov',PoseWithCovarianceStamped,self.createModel)
+        self.pub = rospy.Publisher("motion", Float64MultiArray ,queue_size=100)
         self.ballloc_xyz = [0, 0, 0]
     
     def get_x_variance(self):
@@ -62,7 +64,7 @@ class MotionModel():
         dt = 1
         
         front = R_leg/(2*eta)
-        randomWalk = np.random.normal(0, 0.2) #setting it 0.2 as a educated guess of random walk
+        randomWalk = np.random.normal(y_sensed, 0.2) #setting it 0.2 as a educated guess of random walk
 
         Bmatrix = np.multiply(np.array([[front*np.cos(theta), front*np.cos(theta), 0], [front*np.sin(theta), front *np.sin(theta),0], [0, 0, 1], [-R_leg/(l*eta) ,R_leg/(l*eta), 0]]),dt)
         u_k = [omegaL_k,omegaR_k,randomWalk]
