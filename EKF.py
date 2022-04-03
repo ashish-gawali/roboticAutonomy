@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.linalg import inv
 import human_walk
 import matplotlib.pyplot as plt
 import pdb
@@ -42,14 +43,41 @@ class EKF():
         # The next time this function is called a lnew list is formed.
         for i in range( self.nk):
             X[i] = x + (self.dotX(x,U)*self.dt*i)
-        
-        return X 
-        
+
+        xk = X[0]
+        Amatrix,Bmatrix = self.getGrad(xk,U)
+        Atranspose = Amatrix.transpose()
+        motionNoise = np.array([[1.4,0,0,0],[0,1.4,0,0],[0,0,1.4,0],[0,0,0,1.4]]) #this is in x,y,z convert it to theta and omega
+        Sigma_k_km1 = np.matmul(np.matmul(Amatrix,Sigma_km1_km1),Atranpose) + motionNoise
+
+        return xk,Sigma_k_km1,Amatrix 
 
 
     def correction(self,x_predict, Sx_k_km1, z_k, KalGain):
         #TODO
         # Write a function to correct your prediction using the observed state.
+        I = np.array([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]])
+        C = np.array([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]])
+        
+        #Correcting X
+        temp = self.covMartix
+        xVariance = temp[0]
+        yVariance = temp[7]
+        zVarianceov = temp[14]
+
+        h = [self.ballloc_xyz[0] + np.random.normal(0, np.sqrt(xVariance)),
+            self.ballloc_xyz[1] + np.random.normal(0, np.sqrt(yVariance)),
+            self.ballloc_xyz[3] + np.random.normal(0, np.sqrt(zVariance)),
+            0]   #as we do not have theta noise
+        
+        temp = z_k - h
+        x_corrected = x_predict + np.matmul(KalGain, temp)
+
+
+        #updating sigma
+        Sx_k_k = np.matmul((I - np.matmul(KalGain, C)), Sx_k_km1)
+
+        return x_corrected, Sx_k_k
 
 
     def update(self):
@@ -69,6 +97,16 @@ class EKF():
     def gainUpdate(self,Sx_k_km1):
         #TODO
         # Write a function to update the Kalman Gain, a.k.a. self.KalGain
+        temp = self.covMartix
+        sensorNoise = np.array([[temp[0],0,0,0],[0,temp[7],0,0],[0,0,temp[14],0],[0,0,0,0]])
+        C = np.array([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]])
+
+        tempBracket = np.matmul(np.matmul(C,Sx_k_km1),C.transpose()) + sensorNoise
+        invTempBracket = inv(tempBracket)
+        self.KalGain = np.matmul(Sx_k_km1,(np.matmul(C.transpose(), invTempBracket)))
+        return self.KalGain
+
+
 
     
     def dotX(self,x,U):
@@ -112,14 +150,24 @@ class EKF():
         z_sensed = x[2]
 
         theta = np.arctan2(z_sensed, x_sensed)
+        
+        #Modelling the differential steering
+        l = 0.5
+        R_leg = 0.1
+        eta = 8
+        dt = self.dt
 
-        Amatrix = np.multiply(np.array([[front*np.cos(theta), front*np.cos(theta), 0], [front*np.sin(theta), front *np.sin(theta),0], [0, 0, 1], [-R_leg/(l*eta) ,R_leg/(l*eta), 0]]),dt)
+        Amatrix = np.multiply(np.array([[front*np.cos(theta), front*np.cos(theta), 0, 0],
+                                        [front*np.sin(theta), front *np.sin(theta),0, 0],
+                                        [0, 0, 1, 0], 
+                                        [-R_leg/(l*eta) ,R_leg/(l*eta), 0, 0]]),dt)
         Bmatrix = np.array([[1, 0, 0, 0], [0,1,0,0], [0,0,1,0], [0,0,0,1]])
         return [Amatrix,Bmatrix]
 
 
     def measurement_cb(self, data):
         self.ballloc_xyz = [data.pose.pose.position.x, data.pose.pose.position.y, data.pose.pose.position.z]
+        self.covMartix = data.pose.covariance
         self.X = self.ballloc_xyz
         # print(self.ballloc_xyz)    
 
