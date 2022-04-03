@@ -1,6 +1,7 @@
+#!/usr/bin/env python
 import numpy as np
 from numpy.linalg import inv
-import human_walk
+# import human_walk
 import matplotlib.pyplot as plt
 import pdb
 import rospy
@@ -29,6 +30,7 @@ class EKF():
 
         self.measurement_sub = rospy.Subscriber("/pwcov",PoseWithCovariance,self.measurement_cb) # <--------<< Subscribe to the ball pose topic
 
+        self.z_k = [0,0,0,0]
         print(self.z_k)
 
         self.Sx_k_k = self.Sigma_init
@@ -92,7 +94,7 @@ class EKF():
         self.X_correc = np.reshape(self.X_correc,[6,2])   # <--------<< Publish 
 
         self.X = self.X_correc
-        self.prevX = self.X 
+        self.prevX = X_corrected#self.X 
 
     def gainUpdate(self,Sx_k_km1):
         #TODO
@@ -122,7 +124,14 @@ class EKF():
         X_sensed = [x_sensed, y_sensed, z_sensed, theta]
 
         omegaL_k, omegaR_k = U
-        xDotk = (X_sensed - self.prevX) / self.dt 
+        # diffList = (X_sensed - self.prevX)
+        diffList = [(x-y) for x,y in zip(X_sensed, self.prevX)]
+        # for x,y in zip(X_sensed, self.prevX):
+
+        xDotk = [diff/self.dt for diff in diffList]
+        # xDotk = (X_sensed - self.prevX) / self.dt
+
+        # xDotk =  [i/j for i,j in zip(X_sensed - self.prevX, dt)]
         #Differential steering
         """
         l = 0.5
@@ -177,10 +186,10 @@ if __name__ == '__main__':
     rate = rospy.Rate(1)
 
     # ---------------Define initial conditions --------------- #
-    nk = None       # <------<< Look ahead duration in seconds
-    dt = None       # <------<< Sampling duration of discrete model
-    X =  None       # <------<< Initial State of the Ball
-    U =  None       # <------<< Initial input to the motion model; U = [omegaL_k, omegaR_k]
+    nk = 4       # <------<< Look ahead duration in seconds
+    dt = 1       # <------<< Sampling duration of discrete model
+    X =  [0,0,0,0]       # <------<< Initial State of the Ball
+    U =  [10,10]       # <------<< Initial input to the motion model; U = [omegaL_k, omegaR_k]
     
     filter = EKF(nk,dt,X,U)
 

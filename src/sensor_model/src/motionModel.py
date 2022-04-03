@@ -11,7 +11,7 @@ class MotionModel():
     def __init__(self):
         # pose_topic_name = '/pwcov'
         self.poseWithCovraince = rospy.Subscriber('/pwcov',PoseWithCovarianceStamped,self.createModel)
-        self.pub = rospy.Publisher("motion", Float64MultiArray ,queue_size=100)
+        # self.pub = rospy.Publisher("motion", Float64MultiArray ,queue_size=100)
         self.ballloc_xyz = [0, 0, 0]
     
     def get_x_variance(self):
