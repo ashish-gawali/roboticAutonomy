@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import pdb
 import rospy
 from geometry_msgs.msg import PoseWithCovariance
+from geometry_msgs.msg import PoseWithCovarianceStamped
+
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Twist
 import std_msgs.msg
@@ -19,7 +21,6 @@ class EKF():
         
         self.prevX = [0,0,0,0]
 
-
         # self.Sigma_init = np.array([[0.05,0],[0,0.05]])     # <--------<< Initialize corection covariance
         # self.sigma_measure = np.array([[0.05,0],[0,0.05]])  # <--------<< Should be updated with variance from the measurement
         # self.KalGain = np.random.rand(2,2)                  # <--------<< Initialize Kalman Gain
@@ -28,10 +29,18 @@ class EKF():
         self.sigma_measure = np.array([[0.05,0,0,0],[0,0.05,0,0],[0,0,0.05,0],[0,0,0,0.05]])  # <--------<< Should be updated with variance from the measurement
         self.KalGain = np.random.rand(4,4)                  # <--------<< Initialize Kalman Gain
 
-        self.measurement_sub = rospy.Subscriber("/pwcov",PoseWithCovariance,self.measurement_cb) # <--------<< Subscribe to the ball pose topic
+        self.measurement_sub = rospy.Subscriber("/pwcov",PoseWithCovarianceStamped,self.measurement_cb) # <--------<< Subscribe to the ball pose topic
+        self.ballloc_xyz = [0,0,0,0]
+        self.covMatrix = [0,0,0,0,0,0,
+                            0,0,0,0,0,0,
+                            0,0,0,0,0,0,
+                            0,0,0,0,0,0,
+                            0,0,0,0,0,0,
+                            0,0,0,0,0,0,]
+
 
         self.z_k = [0,0,0,0]
-        print(self.z_k)
+        #print(self.z_k)
 
         self.Sx_k_k = self.Sigma_init
 
@@ -43,14 +52,27 @@ class EKF():
         # You will use only the first state of the sequence for the rest of the filtering process.
         # So at a time k, you should have a list, X = [xk, xk_1, xk_2, xk_3, ..., xk_n] and you will use only xk. 
         # The next time this function is called a lnew list is formed.
+        xdot = self.dotX(x,U)
+        # print(x)
         for i in range( self.nk):
-            X[i] = x + (self.dotX(x,U)*self.dt*i)
+            # X[i] = np.add(x, (xdot*self.dt*i))
+            # print(i)
+            # print("XDot")
+            # print(xdot)
+            # print("Xdot mul")
+            # print((xdot.dot(self.dt*i)))
+            # print("x")
+            # print(x)
+            X[i] = np.add(x, (xdot.dot(self.dt*i)))
+            #print(X[i])
 
         xk = X[0]
+        # print("xk")
+        # print(xk)
         Amatrix,Bmatrix = self.getGrad(xk,U)
         Atranspose = Amatrix.transpose()
         motionNoise = np.array([[1.4,0,0,0],[0,1.4,0,0],[0,0,1.4,0],[0,0,0,1.4]]) #this is in x,y,z convert it to theta and omega
-        Sigma_k_km1 = np.matmul(np.matmul(Amatrix,Sigma_km1_km1),Atranpose) + motionNoise
+        Sigma_k_km1 = np.matmul(np.matmul(Amatrix,Sigma_km1_km1),Atranspose) + motionNoise
 
         return xk,Sigma_k_km1,Amatrix 
 
@@ -62,17 +84,17 @@ class EKF():
         C = np.array([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]])
         
         #Correcting X
-        temp = self.covMartix
+        temp = self.covMatrix
         xVariance = temp[0]
         yVariance = temp[7]
-        zVarianceov = temp[14]
+        zVariance = temp[14]
 
         h = [self.ballloc_xyz[0] + np.random.normal(0, np.sqrt(xVariance)),
             self.ballloc_xyz[1] + np.random.normal(0, np.sqrt(yVariance)),
-            self.ballloc_xyz[3] + np.random.normal(0, np.sqrt(zVariance)),
+            self.ballloc_xyz[2] + np.random.normal(0, np.sqrt(zVariance)),
             0]   #as we do not have theta noise
         
-        temp = z_k - h
+        temp = np.subtract(z_k , h)
         x_corrected = x_predict + np.matmul(KalGain, temp)
 
 
@@ -84,22 +106,30 @@ class EKF():
 
     def update(self):
         self.X_pred = self.X 
-        
+        print(self.X)
         X_predicted,Sx_k_km1, A = self.prediction(self.X,self.U,self.Sx_k_k)                        # PREDICTION STEP  
         X_corrected, self.Sx_k_k = self.correction(X_predicted, Sx_k_km1, self.z_k, self.KalGain)   # CORRECTION STEP 
+        print("----------------")
+        print(X_corrected)
+        print("----------------")
         self.gainUpdate(Sx_k_km1)                                                                   # GAIN UPDATE       
-        self.X = X_corrected  
+        self.X = X_corrected 
+        file1 = open("MyFile.txt", "a")
+        # str1 = 
+        file1.write("\nBall xyz: "+ str(self.ballloc_xyz))
+        file1.write("\npredictd: "+ str(self.X))
+        # file1.close() 
 
-        self.X_pred = np.reshape(self.X_pred,[6,2])       
-        self.X_correc = np.reshape(self.X_correc,[6,2])   # <--------<< Publish 
+        # self.X_pred = np.reshape(self.X_pred,[8,2])       
+        # self.X_correc = np.reshape(X_corrected,[6,2])   # <--------<< Publish 
 
-        self.X = self.X_correc
+        # self.X = self.X_correc
         self.prevX = X_corrected#self.X 
 
     def gainUpdate(self,Sx_k_km1):
         #TODO
         # Write a function to update the Kalman Gain, a.k.a. self.KalGain
-        temp = self.covMartix
+        temp = self.covMatrix
         sensorNoise = np.array([[temp[0],0,0,0],[0,temp[7],0,0],[0,0,temp[14],0],[0,0,0,0]])
         C = np.array([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]])
 
@@ -118,19 +148,18 @@ class EKF():
         x_sensed = x[0] 
         y_sensed = x[1]
         z_sensed = x[2]
-
+        #print(z_sensed)
         theta = np.arctan2(z_sensed, x_sensed)
 
         X_sensed = [x_sensed, y_sensed, z_sensed, theta]
-
         omegaL_k, omegaR_k = U
         # diffList = (X_sensed - self.prevX)
-        diffList = [(x-y) for x,y in zip(X_sensed, self.prevX)]
+        # diffList = [(x-y) for x,y in zip(X_sensed, self.prevX)]
         # for x,y in zip(X_sensed, self.prevX):
 
-        xDotk = [diff/self.dt for diff in diffList]
-        # xDotk = (X_sensed - self.prevX) / self.dt
-
+        # xDotk = [diff/self.dt for diff in diffList]
+        xDotk = (np.subtract(X_sensed, self.prevX)) / self.dt
+        #print('xDotk' + str(xDotk))
         # xDotk =  [i/j for i,j in zip(X_sensed - self.prevX, dt)]
         #Differential steering
         """
@@ -165,6 +194,7 @@ class EKF():
         R_leg = 0.1
         eta = 8
         dt = self.dt
+        front = R_leg/(2*eta)
 
         Amatrix = np.multiply(np.array([[front*np.cos(theta), front*np.cos(theta), 0, 0],
                                         [front*np.sin(theta), front *np.sin(theta),0, 0],
@@ -175,8 +205,10 @@ class EKF():
 
 
     def measurement_cb(self, data):
-        self.ballloc_xyz = [data.pose.pose.position.x, data.pose.pose.position.y, data.pose.pose.position.z]
-        self.covMartix = data.pose.covariance
+        theta = np.arctan2(data.pose.pose.position.z, data.pose.pose.position.x)
+        self.ballloc_xyz = [data.pose.pose.position.x, data.pose.pose.position.y, data.pose.pose.position.z,theta]
+        self.covMatrix = data.pose.covariance
+        #print(self.covMatrix)
         self.X = self.ballloc_xyz
         # print(self.ballloc_xyz)    
 
