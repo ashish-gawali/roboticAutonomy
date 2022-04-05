@@ -11,6 +11,7 @@ from geometry_msgs.msg import PoseWithCovarianceStamped
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Twist
 import std_msgs.msg
+from visualization_msgs.msg import Marker
 
 class EKF():
     def __init__(self,nk,dt,X,U):
@@ -30,6 +31,8 @@ class EKF():
         self.KalGain = np.random.rand(4,4)                  # <--------<< Initialize Kalman Gain
 
         self.measurement_sub = rospy.Subscriber("/pwcov",PoseWithCovarianceStamped,self.measurement_cb) # <--------<< Subscribe to the ball pose topic
+        self.correctedPos = rospy.Publisher("corrected_marker", Marker ,queue_size=100)
+
         self.ballloc_xyz = [0,0,0,0]
         self.covMatrix = [0,0,0,0,0,0,
                             0,0,0,0,0,0,
@@ -106,12 +109,12 @@ class EKF():
 
     def update(self):
         self.X_pred = self.X 
-        print(self.X)
+        #print(self.X)
         X_predicted,Sx_k_km1, A = self.prediction(self.X,self.U,self.Sx_k_k)                        # PREDICTION STEP  
         X_corrected, self.Sx_k_k = self.correction(X_predicted, Sx_k_km1, self.z_k, self.KalGain)   # CORRECTION STEP 
-        print("----------------")
-        print(X_corrected)
-        print("----------------")
+        #print("----------------")
+        #print(X_corrected)
+        #print("----------------")
         self.gainUpdate(Sx_k_km1)                                                                   # GAIN UPDATE       
         self.X = X_corrected 
         file1 = open("MyFile.txt", "a")
@@ -122,9 +125,31 @@ class EKF():
 
         # self.X_pred = np.reshape(self.X_pred,[8,2])       
         # self.X_correc = np.reshape(X_corrected,[6,2])   # <--------<< Publish 
-
+        marker = Marker()
+        marker.header.frame_id = "camera_link"
+        marker.header.stamp = rospy.Time.now()
+        marker.id = 2
+        marker.type = marker.SPHERE
+        marker.action =marker.ADD
+        marker.pose.position.x =  self.X[2]
+        marker.pose.position.y =  self.X[0]*-1
+        marker.pose.position.z =  self.X[1]*-1
+        marker.pose.orientation.x = 0
+        marker.pose.orientation.y = 0
+        marker.pose.orientation.z = 0
+        marker.pose.orientation.w = 1
+        marker.scale.x = .1
+        marker.scale.y = .1
+        marker.scale.z = .1
+        marker.color.a = 1.0 
+        marker.color.r = 1.0
+        marker.color.g = 0.0
+        marker.color.b = 0.0
+        self.correctedPos.publish(marker)
         # self.X = self.X_correc
         self.prevX = X_corrected#self.X 
+
+        
 
     def gainUpdate(self,Sx_k_km1):
         #TODO
@@ -159,6 +184,7 @@ class EKF():
 
         # xDotk = [diff/self.dt for diff in diffList]
         xDotk = (np.subtract(X_sensed, self.prevX)) / self.dt
+        print(xDotk)
         #print('xDotk' + str(xDotk))
         # xDotk =  [i/j for i,j in zip(X_sensed - self.prevX, dt)]
         #Differential steering
@@ -190,8 +216,8 @@ class EKF():
         theta = np.arctan2(z_sensed, x_sensed)
         
         #Modelling the differential steering
-        l = 0.5
-        R_leg = 0.1
+        l = 1
+        R_leg = 0.01
         eta = 8
         dt = self.dt
         front = R_leg/(2*eta)
@@ -207,6 +233,7 @@ class EKF():
     def measurement_cb(self, data):
         theta = np.arctan2(data.pose.pose.position.z, data.pose.pose.position.x)
         self.ballloc_xyz = [data.pose.pose.position.x, data.pose.pose.position.y, data.pose.pose.position.z,theta]
+        self.U = [int(data.pose.pose.position.z*10), int(data.pose.pose.position.x*10)]
         self.covMatrix = data.pose.covariance
         #print(self.covMatrix)
         self.X = self.ballloc_xyz
@@ -221,7 +248,7 @@ if __name__ == '__main__':
     nk = 4       # <------<< Look ahead duration in seconds
     dt = 1       # <------<< Sampling duration of discrete model
     X =  [0,0,0,0]       # <------<< Initial State of the Ball
-    U =  [10,10]       # <------<< Initial input to the motion model; U = [omegaL_k, omegaR_k]
+    U =  [15,15]       # <------<< Initial input to the motion model; U = [omegaL_k, omegaR_k]
     
     filter = EKF(nk,dt,X,U)
 
