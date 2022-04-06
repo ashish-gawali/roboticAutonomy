@@ -8,6 +8,7 @@ import rospy
 from geometry_msgs.msg import PoseWithCovariance
 from geometry_msgs.msg import PoseWithCovarianceStamped
 
+import tf.transformations as tf
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Twist
 import std_msgs.msg
@@ -21,6 +22,7 @@ class EKF():
         self.U = U
         
         self.prevX = [0,0]
+        self.prevXSensed = [0, 0]
 
         self.Sigma_init = np.array([[0.05,0],[0,0.05]])     # <--------<< Initialize corection covariance
         self.sigma_measure = np.array([[0.05,0],[0,0.05]])  # <--------<< Should be updated with variance from the measurement
@@ -51,8 +53,10 @@ class EKF():
         #print(self.z_k)
 
 
-        self.file1 = open("12_front_200.txt", "a")
-        self.front = .7
+        self.file1 = open("00000Demo.txt", "a")
+        self.file2 = open("00000Covariance.txt", "a")
+        self.file3 = open("00000Kalman.txt", "a")
+        self.front = .2
         self.Sx_k_k = self.Sigma_init
 
 
@@ -103,6 +107,7 @@ class EKF():
         #print("-------------------------------------------------")
         for i in range(self.nk):
             # x_next, S_next, A_next = self.prediction(x_next, U, S_next)
+            xdot_next = self.dotX(x_next, [x_next[0]*10, x_next[1]*10])
             x_next = np.add(x_next, xdot)
             #print(x_next)
             A, B = self.getGrad(x_next, [x_next[0]*10, x_next[1]*10])
@@ -189,9 +194,11 @@ class EKF():
         self.X = X_corrected 
         #print(self.X)
         # str1 = 
-        # file1.write("\nBall xyz: "+ str(self.ballloc_xyz))
-        # file1.write("\npredictd: "+ str(self.X))
-        self.file1.write(str(self.ballloc_xyz[0]) + ",\t"+ str(self.ballloc_xyz[2]) + ",\t" +str(self.X[0]) + ",\t" + str(self.X[1]) + "\n")
+        self.file1.write("\nBall xyz: "+ str(str(self.ballloc_xyz[0]) + " , " + str(str(self.ballloc_xyz[2]))))
+        self.file1.write("\npredictd: "+ str(self.X[0]) + " , "+ str(self.X[1]))
+        self.file2.write("\n" + str(self.Sx_k_k))
+        self.file3.write("\n" + str(self.KalGain))
+        # self.file1.write(str(self.ballloc_xyz[0]) + ",\t"+ str(self.ballloc_xyz[2]) + ",\t" +str(self.X[0]) + ",\t" + str(self.X[1]) + "\n")
         # file1.close() 
         #print(self.ballloc_xyz)
         # self.X_pred = np.reshape(self.X_pred,[8,2])       
@@ -205,6 +212,7 @@ class EKF():
         marker.pose.position.x =  self.X[0]
         marker.pose.position.y =  self.ballloc_xyz[1]
         marker.pose.position.z = self.X[1]
+        
         marker.pose.orientation.x = 0
         marker.pose.orientation.y = 0
         marker.pose.orientation.z = 0
@@ -231,10 +239,14 @@ class EKF():
         pwc.pose.pose.position.x = self.X[0]
         pwc.pose.pose.position.y = self.ballloc_xyz[1]
         pwc.pose.pose.position.z = self.X[1]
-        pwc.pose.pose.orientation.x = 0
-        pwc.pose.pose.orientation.y = 0
-        pwc.pose.pose.orientation.z = 0
-        pwc.pose.pose.orientation.w = 1
+
+        thetaOrient = np.arctan2(self.X[1], self.X[0])
+        Xorient, Yorient, Zorient, Worient = tf.quaternion_from_euler(0,0, thetaOrient)
+                
+        pwc.pose.pose.orientation.x = Xorient
+        pwc.pose.pose.orientation.y = Yorient
+        pwc.pose.pose.orientation.z = Zorient
+        pwc.pose.pose.orientation.w = Worient
         pwc.pose.covariance = tempMatrix
         self.correctedPWCOV.publish(pwc)
 
@@ -293,7 +305,11 @@ class EKF():
         X_sensed = [x_sensed, z_sensed]
 
         omegaL_k, omegaR_k = U
+        # xDotk = (np.subtract(X_sensed, self.prevX)) / self.dt
         xDotk = (np.subtract(X_sensed, self.prevX)) / self.dt
+        
+        self.prevXSensed = X_sensed
+
         #print(xDotk)
         #print('xDotk' + str(xDotk))
         # xDotk =  [i/j for i,j in zip(X_sensed - self.prevX, dt)]
