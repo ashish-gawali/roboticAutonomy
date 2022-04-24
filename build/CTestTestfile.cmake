@@ -6,4 +6,6 @@
 # testing this directory and lists subdirectories to be tested as well.
 subdirs("gtest")
 subdirs("ball_detect")
+subdirs("mapping")
 subdirs("sensor_model")
+subdirs("my_robot_name_2dnav")

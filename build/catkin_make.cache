@@ -1,2 +1,2 @@
-ball_detect:sensor_model
+ball_detect:mapping:my_robot_name_2dnav:sensor_model
 -DCATKIN_DEVEL_PREFIX=/home/team6/robotic_autonomy_ws/devel -DCMAKE_INSTALL_PREFIX=/home/team6/robotic_autonomy_ws/install -G Unix Makefiles

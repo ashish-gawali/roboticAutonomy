@@ -1,0 +1,8 @@
+prefix=/home/team6/robotic_autonomy_ws/devel
+
+Name: my_robot_name_2dnav
+Description: Description of my_robot_name_2dnav
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

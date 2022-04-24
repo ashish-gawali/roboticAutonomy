@@ -132,7 +132,9 @@ if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
   include("/home/team6/robotic_autonomy_ws/build/gtest/cmake_install.cmake")
   include("/home/team6/robotic_autonomy_ws/build/ball_detect/cmake_install.cmake")
+  include("/home/team6/robotic_autonomy_ws/build/mapping/cmake_install.cmake")
   include("/home/team6/robotic_autonomy_ws/build/sensor_model/cmake_install.cmake")
+  include("/home/team6/robotic_autonomy_ws/build/my_robot_name_2dnav/cmake_install.cmake")
 
 endif()
 
