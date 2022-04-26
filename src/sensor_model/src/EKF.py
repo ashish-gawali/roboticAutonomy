@@ -243,7 +243,7 @@ class EKF():
         #TODO change the noise to correspond to the futureVals
         xNoise = 0
         zNoise = 0
-        if considerReceivedValues is True:
+        if self.considerReceivedValues is True:
             temp = self.covMatrix    
             xNoise = np.random.normal(0, np.sqrt(temp[0]))
             zNoise = np.random.normal(0, np.sqrt(temp[14]))
@@ -341,17 +341,15 @@ class EKF():
         self.ballloc_xyz = [data.pose.pose.position.x, data.pose.pose.position.y, data.pose.pose.position.z,theta]
         self.U = [int(data.pose.pose.position.x*10), int(data.pose.pose.position.z*10)]
         self.covMatrix = data.pose.covariance
-        #print(self.covMatrix)
         self.considerReceivedValues = True
-        if self.ballloc_xyz[0]>5 or self.ballloc_xyz[2]>1.5:
+        if abs(self.ballloc_xyz[0])>5 or abs(self.ballloc_xyz[2])>5:
             self.considerReceivedValues = False
+            print("not considering values")
         self.X = [self.ballloc_xyz[0],self.ballloc_xyz[2]]
-        # print(self.ballloc_xyz)    
-
 
 if __name__ == '__main__':
     rospy.init_node("EKF")
-    rate = rospy.Rate(1)
+    rate = rospy.Rate(4)
 
     # ---------------Define initial conditions --------------- #
     nk = 4       # <------<< Look ahead duration in seconds

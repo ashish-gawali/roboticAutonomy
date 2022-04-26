@@ -1,32 +1,3 @@
-
-Skip to content
-Pull requests
-Issues
-Marketplace
-Explore
-@ashish-gawali
-ashish-gawali /
-roboticAutonomy
-Public
-
-Code
-Issues
-Pull requests
-Actions
-Projects
-Wiki
-Security
-Insights
-
-    Settings
-
-roboticAutonomy/src/ball_detect/src/BallDetect_skeleton.py /
-@ashish-gawali
-ashish-gawali motion model complete and tested
-Latest commit b67459c 16 days ago
-History
-1 contributor
-executable file 369 lines (306 sloc) 12.9 KB
 #!/usr/bin/env python
 import numpy as np
 import matplotlib.pyplot as plt
@@ -396,19 +367,3 @@ if __name__ == "__main__":
             tracker.posewithCovar()
         #call pub_tf
         rate.sleep()
-
-    © 2022 GitHub, Inc.
-
-    Terms
-    Privacy
-    Security
-    Status
-    Docs
-    Contact GitHub
-    Pricing
-    API
-    Training
-    Blog
-    About
-
-Loading complete
